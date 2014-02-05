@@ -172,19 +172,6 @@ module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
     handlers[messageName] = null;
   }
 
-  function addDispatchListener(eventName, func, properties) {
-    addListener(eventName, func);
-    post('listenForDispatchEvent', {
-      eventName: eventName,
-      properties: properties
-    });
-  }
-
-  function removeDispatchListener(eventName) {
-    post('removeListenerForDispatchEvent', eventName);
-    removeListener(eventName);
-  }
-
   function receiveMessage(message) {
     var messageData;
 
@@ -226,9 +213,7 @@ module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
   return {
     post: post,
     addListener: addListener,
-    removeListener: removeListener,
-    addDispatchListener: addDispatchListener,
-    removeDispatchListener: removeDispatchListener
+    removeListener: removeListener
   };
 };
 
