@@ -125,7 +125,7 @@ module.exports = function getIFrameEndpoint() {
 },{"./structured-clone":3}],2:[function(require,module,exports){
 var structuredClone = require('./structured-clone');
 
-module.exports = function ParentEndpoint(iframe, afterConnectedCallback, modelLoadedCallback) {
+module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
   var selfOrigin = window.location.href.match(/(.*?\/\/.*?)\//)[1];
   var postMessageQueue = [];
   var connected = false;
@@ -217,13 +217,6 @@ module.exports = function ParentEndpoint(iframe, afterConnectedCallback, modelLo
     // Now send any messages that have been queued up ...
     while(postMessageQueue.length > 0) {
       post(postMessageQueue.shift());
-    }
-  });
-
-  // When a model is loaded trigger a callback defined by the client code (if present).
-  addListener('modelLoaded', function () {
-    if (modelLoadedCallback && typeof modelLoadedCallback === "function") {
-      modelLoadedCallback();
     }
   });
 
