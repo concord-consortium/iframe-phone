@@ -5,32 +5,38 @@ Simplified communication between the parent site and iframe based on [window.pos
 ## Build
 
 To install dependencies (browserify) run:
-```
-npm install
-```
+
+    npm install
+
 To build the library in *dist* directory run:
-```
-npm run build
-```
+
+    npm run build
+
 
 ## Usage
 
 iframe-phone is a UMD bundle (*dist/iframe-phone.js*). You can include it directly or use some module system (e.g. browserify or RequireJS). When you include it directly, it will be available under global `iframePhone` name.
 
-Example:
-- parent site:
+### parent
+
 ```javascript
 var phone = new iframePhone.ParentEndpoint(iframeElement, function () {
   console.log("connection with iframe established");
 });
 phone.post('testMessage', 'abc');
+phone.addListener('response', function (content) {
+  console.log("parent received response: " + content);
+});
 ```
-- iframe:
+
+### iframe
+
 ```javascript
 // IFrameEndpoint instance is a singleton (iframe can't have multiple parents anyway).
 var phone = iframePhone.getIFrameEndpoint();
 phone.addListener('testMessage', function (content) { 
-  console.log("message received: " + content);
+  console.log("iframe received message: " + content);
+  phone.post('response', 'got it');
 });
 // Initialize connection after all message listeners are added!
 phone.initialize();
