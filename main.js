@@ -9,4 +9,8 @@ module.exports = {
    */
   getIFrameEndpoint: require('./lib/iframe-endpoint'),
   structuredClone: require('./lib/structured-clone'),
+
+  // TODO: May be misnamed
+  IframePhoneRpcEndpoint: require('./lib/iframe-phone-rpc-endpoint')
+
 };

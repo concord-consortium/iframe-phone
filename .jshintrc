@@ -1,0 +1,32 @@
+{
+  "predef": ["$", "d3", "define", "_gaq"],
+
+  "browser" : true,
+
+  "eqnull": true,
+  "boss" : false,
+  "curly": false,
+  "debug": false,
+  "devel": false,
+  "eqeqeq": true,
+  "evil": true,
+  "forin": false,
+  "immed": true,
+  "indent": false,
+  "laxbreak": false,
+  "newcap": true,
+  "noarg": true,
+  "node": true,
+  "noempty": true,
+  "nonew": false,
+  "nomen": false,
+  "onevar": false,
+  "plusplus": false,
+  "regexp": false,
+  "undef": true,
+  "sub": true,
+  "strict": false,
+  "trailing": true,
+  "white": false,
+  "unused": true
+}

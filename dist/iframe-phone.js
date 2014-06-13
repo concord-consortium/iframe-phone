@@ -122,16 +122,109 @@ module.exports = function getIFrameEndpoint() {
   }
   return instance;
 };
-},{"./structured-clone":3}],2:[function(require,module,exports){
+},{"./structured-clone":4}],2:[function(require,module,exports){
+var ParentEndpoint = require('./parent-endpoint');
+var getIFrameEndpoint = require('./iframe-endpoint');
+
+// Not a real UUID as there's an RFC for that (needed for proper distributed computing).
+// But in this fairly parochial situation, we just need to be fairly sure to avoid repeats.
+function getPseudoUUID() {
+	var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+	var len = chars.length;
+	var ret = [];
+
+	for (var i = 0; i < 10; i++) {
+		ret.push(chars[Math.floor(Math.random() * len)]);
+	}
+	return ret.join('');
+}
+
+module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindow, targetOrigin) {
+	var phone;
+	var pendingCallbacks = {};
+
+	if (targetWindow === window.parent) {
+		phone = getIFrameEndpoint();
+		phone.initialize();
+	} else {
+		phone = new ParentEndpoint(targetWindow, targetOrigin);
+	}
+
+	phone.addListener(namespace, function(message) {
+		if (message.messageType === 'call') {
+			handler(message.value, function(returnValue) {
+				phone.post(namespace, {
+					messageType: 'returnValue',
+					uuid: message.uuid,
+					value: returnValue
+				});
+			});
+		} else if (message.messageType === 'returnValue') {
+			if (pendingCallbacks[message.uuid]) {
+				pendingCallbacks[message.uuid](message.value);
+			}
+		}
+	});
+
+	function call(message, callback) {
+		var uuid = getPseudoUUID();
+		pendingCallbacks[uuid] = callback;
+
+		phone.post(namespace, {
+			messageType: 'call',
+			uuid: uuid,
+			value: message
+		});
+	}
+
+	return {
+		call: call
+	};
+};
+
+},{"./iframe-endpoint":1,"./parent-endpoint":3}],3:[function(require,module,exports){
 var structuredClone = require('./structured-clone');
 
-module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
+/**
+  Call as:
+    new ParentEndpoint(targetWindow, targetOrigin, afterConnectedCallback)
+      targetWindow is a WindowProxy object. (Messages will be sent to it)
+
+      targetOrigin is the origin of the targetWindow. (Messages will be restricted to this origin)
+
+      afterConnectedCallback is an optional callback function to be called when the connection is
+        established.
+
+  OR (less secure):
+    new ParentEndpoint(targetIframe, afterConnectedCallback)
+
+      targetIframe is a DOM object (HTMLIframeElement); messages will be sent to its contentWindow.
+
+      afterConnectedCallback is an optional callback function
+
+    In this latter case, targetOrigin will be inferred from the value of the src attribute of the
+    provided DOM object at the time of the constructor invocation. This is less secure because the
+    iframe might have been navigated to an unexpected domain before constructor invocation.
+
+  Note that it is important to specify the expected origin of the iframe's content to safeguard
+  against sending messages to an unexpected domain. This might happen if our iframe is navigated to
+  a third-party URL unexpectedly. Furthermore, having a reference to Window object (as in the first
+  form of the constructor) does not protect against sending a message to the wrong domain. The
+  window object is actualy a WindowProxy which transparently proxies the Window object of the
+  underlying iframe, so that when the iframe is navigated, the "same" WindowProxy now references a
+  completely differeent Window object, possibly controlled by a hostile domain.
+
+  See http://www.esdiscuss.org/topic/a-dom-use-case-that-can-t-be-emulated-with-direct-proxies for
+  more about this weird behavior of WindowProxies (the type returned by <iframe>.contentWindow).
+*/
+
+module.exports = function ParentEndpoint(targetWindow, targetOrigin, afterConnectedCallback) {
   var selfOrigin = window.location.href.match(/(.*?\/\/.*?)\//)[1];
   var postMessageQueue = [];
   var connected = false;
   var handlers = {};
 
-  function getIframeOrigin() {
+  function getOrigin(iframe) {
     return iframe.src.match(/(.*?\/\/.*?)\//)[1];
   }
 
@@ -154,9 +247,9 @@ module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
       //     https://github.com/Modernizr/Modernizr/issues/388
       //     http://jsfiddle.net/ryanseddon/uZTgD/2/
       if (structuredClone.supported()) {
-        iframe.contentWindow.postMessage(message, getIframeOrigin());
+        targetWindow.postMessage(message, targetOrigin);
       } else {
-        iframe.contentWindow.postMessage(JSON.stringify(message), getIframeOrigin());
+        targetWindow.postMessage(JSON.stringify(message), targetOrigin);
       }
     } else {
       // else queue up the messages to send after connection complete.
@@ -175,7 +268,7 @@ module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
   function receiveMessage(message) {
     var messageData;
 
-    if (message.source === iframe.contentWindow && message.origin === getIframeOrigin()) {
+    if (message.source === targetWindow && message.origin === targetOrigin) {
       messageData = message.data;
       if (typeof messageData === 'string') {
         messageData = JSON.parse(messageData);
@@ -186,6 +279,20 @@ module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
         console.log("cant handle type: " + messageData.type);
       }
     }
+  }
+
+  // handle the case that targetWindow is actually an <iframe> rather than a Window(Proxy) object
+  if (targetWindow.constructor === HTMLIFrameElement) {
+
+    // Infer the origin ONLY if the user did not supply an explicit origin, i.e., if the second
+    // argument is empty or is actually a callback (meaning it is supposed to be the
+    // afterConnectionCallback)
+    if ( !targetOrigin || targetOrigin.constructor === Function) {
+      afterConnectedCallback = targetOrigin;
+      targetOrigin = getOrigin(targetWindow);
+    }
+
+    targetWindow = targetWindow.contentWindow;
   }
 
   // when we receive 'hello':
@@ -217,7 +324,7 @@ module.exports = function ParentEndpoint(iframe, afterConnectedCallback) {
   };
 };
 
-},{"./structured-clone":3}],3:[function(require,module,exports){
+},{"./structured-clone":4}],4:[function(require,module,exports){
 var featureSupported = false;
 
 (function () {
@@ -255,7 +362,7 @@ exports.supported = function supported() {
   return featureSupported && featureSupported.structuredClones > 0;
 };
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 module.exports = {
   /**
    * Allows to communicate with an iframe.
@@ -267,9 +374,13 @@ module.exports = {
    */
   getIFrameEndpoint: require('./lib/iframe-endpoint'),
   structuredClone: require('./lib/structured-clone'),
+
+  // TODO: May be misnamed
+  IframePhoneRpcEndpoint: require('./lib/iframe-phone-rpc-endpoint')
+
 };
 
-},{"./lib/iframe-endpoint":1,"./lib/parent-endpoint":2,"./lib/structured-clone":3}]},{},[4])
-(4)
+},{"./lib/iframe-endpoint":1,"./lib/iframe-phone-rpc-endpoint":2,"./lib/parent-endpoint":3,"./lib/structured-clone":4}]},{},[5])
+(5)
 });
 ;
