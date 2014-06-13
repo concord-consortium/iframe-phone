@@ -1,0 +1,27 @@
+{
+  "name": "iframe-phone",
+  "version": "1.0.0",
+  "homepage": "https://github.com/concord-consortium/iframe-phone",
+  "authors": [
+    ""
+  ],
+  "description": "Convenient communication between the parent site and iframe based on window.postMessage()",
+  "main": "dist/iframe-phone.js",
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "devDependencies": {
+    "jasmine": "~2.0.0"
+  }
+}
