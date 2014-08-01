@@ -281,11 +281,8 @@ module.exports = function ParentEndpoint(targetWindow, targetOrigin, afterConnec
     }
   }
 
-
-
   // handle the case that targetWindow is actually an <iframe> rather than a Window(Proxy) object
   if (targetWindow.constructor === HTMLIFrameElement) {
-    targetWindow = targetWindow.contentWindow;
 
     // Infer the origin ONLY if the user did not supply an explicit origin, i.e., if the second
     // argument is empty or is actually a callback (meaning it is supposed to be the
@@ -294,6 +291,8 @@ module.exports = function ParentEndpoint(targetWindow, targetOrigin, afterConnec
       afterConnectedCallback = targetOrigin;
       targetOrigin = getOrigin(targetWindow);
     }
+
+    targetWindow = targetWindow.contentWindow;
   }
 
   // when we receive 'hello':
