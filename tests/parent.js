@@ -4,10 +4,8 @@ var IframePhoneRpcEndpoint = iframePhone.IframePhoneRpcEndpoint;
 
 window.onload = function() {
 	function handler(message, callback) {
-		if (message && message.hello && message.hello === true) {
-			callback({
-				receivedHello: true
-			});
+		if (message === "hello") {
+			callback("hello to you from your parent!");
 		}
 	}
 
