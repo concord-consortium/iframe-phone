@@ -84,6 +84,11 @@ function IFrameEndpoint() {
       }
    }
 
+   function disconnect() {
+     connected = false;
+     window.removeEventListener('message', messsageListener);
+   }
+
   /**
     Initialize communication with the parent frame. This should not be called until the app's custom
     listeners are registered (via our 'addListener' public method) because, once we open the
@@ -109,6 +114,7 @@ function IFrameEndpoint() {
     getListenerNames  : getListenerNames,
     addListener       : addListener,
     removeAllListeners: removeAllListeners,
+    disconnect        : disconnect,
     post              : post
   };
 }
@@ -177,8 +183,13 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
 		});
 	}
 
+	function disconnect() {
+		phone.disconnect();
+	}
+
 	return {
-		call: call
+		call: call,
+		disconnect: disconnect
 	};
 };
 
@@ -282,6 +293,11 @@ module.exports = function ParentEndpoint(targetWindow, targetOrigin, afterConnec
     }
   }
 
+  function disconnect() {
+    connected = false;
+    window.removeEventListener('message', receiveMessage);
+  }
+
   // handle the case that targetWindow is actually an <iframe> rather than a Window(Proxy) object
   // Note that if it *is* a WindowProxy, this probe will throw a SecurityException, but in that case
   // we also don't need to do anything
@@ -329,7 +345,8 @@ module.exports = function ParentEndpoint(targetWindow, targetOrigin, afterConnec
   return {
     post: post,
     addListener: addListener,
-    removeListener: removeListener
+    removeListener: removeListener,
+    disconnect: disconnect
   };
 };
 
