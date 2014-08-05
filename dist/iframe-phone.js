@@ -1,5 +1,7 @@
 !function(e){"object"==typeof exports?module.exports=e():"function"==typeof define&&define.amd?define(e):"undefined"!=typeof window?window.iframePhone=e():"undefined"!=typeof global?global.iframePhone=e():"undefined"!=typeof self&&(self.iframePhone=e())}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var structuredClone = require('./structured-clone');
+var HELLO_INTERVAL_LENGTH = 200;
+var HELLO_TIMEOUT_LENGTH = 1000;
 
 function IFrameEndpoint() {
   var parentOrigin;
@@ -7,6 +9,7 @@ function IFrameEndpoint() {
   var isInitialized = false;
   var connected = false;
   var postMessageQueue = [];
+  var helloInterval;
 
   function postToTarget(message, target) {
     // See http://dev.opera.com/articles/view/window-postmessage-messagechannel/#crossdoc
@@ -73,6 +76,7 @@ function IFrameEndpoint() {
         // This is the return handshake from the embedding window.
         parentOrigin = messageData.origin;
         connected = true;
+        stopPostingHello();
         while(postMessageQueue.length > 0) {
           post(postMessageQueue.shift());
         }
@@ -86,6 +90,7 @@ function IFrameEndpoint() {
 
    function disconnect() {
      connected = false;
+     stopPostingHello();
      window.removeEventListener('message', messsageListener);
    }
 
@@ -105,7 +110,21 @@ function IFrameEndpoint() {
     // We kick off communication with the parent window by sending a "hello" message. Then we wait
     // for a handshake (another "hello" message) from the parent window.
     postHello();
+    startPostingHello();
     window.addEventListener('message', messageListener, false);
+  }
+
+  function startPostingHello() {
+    if (helloInterval) {
+      stopPostingHello();
+    }
+    helloInterval = window.setInterval(postHello, HELLO_INTERVAL_LENGTH);
+    window.setTimeout(stopPostingHello, HELLO_TIMEOUT_LENGTH);
+  }
+
+  function stopPostingHello() {
+    window.clearInterval(helloInterval);
+    helloInterval = null;
   }
 
   // Public API.
