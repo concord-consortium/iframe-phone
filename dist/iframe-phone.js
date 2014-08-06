@@ -166,7 +166,7 @@ function getPseudoUUID() {
 
 module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindow, targetOrigin) {
     var phone;
-    var pendingCallbacks = {};
+    var pendingCallbacks = Object.create({});
 
     if (targetWindow === window.parent) {
         phone = getIFrameEndpoint();
@@ -176,6 +176,8 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
     }
 
     phone.addListener(namespace, function(message) {
+        var callback;
+
         if (message.messageType === 'call') {
             handler(message.value, function(returnValue) {
                 phone.post(namespace, {
@@ -185,8 +187,10 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
                 });
             });
         } else if (message.messageType === 'returnValue') {
-            if (pendingCallbacks[message.uuid]) {
-                pendingCallbacks[message.uuid](message.value);
+            callback = pendingCallbacks[message.uuid];
+            if (callback) {
+                callback(message.value);
+                pendingCallbacks[message.uuid] = null;
             }
         }
     });
