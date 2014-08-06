@@ -148,6 +148,8 @@ module.exports = function getIFrameEndpoint() {
   return instance;
 };
 },{"./structured-clone":4}],2:[function(require,module,exports){
+"use strict";
+
 var ParentEndpoint = require('./parent-endpoint');
 var getIFrameEndpoint = require('./iframe-endpoint');
 
@@ -176,7 +178,7 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
     }
 
     phone.addListener(namespace, function(message) {
-        var callback;
+        var callbackObj;
 
         if (message.messageType === 'call') {
             handler(message.value, function(returnValue) {
@@ -187,9 +189,11 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
                 });
             });
         } else if (message.messageType === 'returnValue') {
-            callback = pendingCallbacks[message.uuid];
-            if (callback) {
-                callback(message.value);
+            callbackObj = pendingCallbacks[message.uuid];
+
+            if (callbackObj) {
+                window.clearTimeout(callbackObj.timeout);
+                callbackObj.callback.call(undefined, message.value);
                 pendingCallbacks[message.uuid] = null;
             }
         }
@@ -197,7 +201,13 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
 
     function call(message, callback) {
         var uuid = getPseudoUUID();
-        pendingCallbacks[uuid] = callback;
+
+        pendingCallbacks[uuid] = {
+            callback: callback,
+            timeout: window.setTimeout(function() {
+                callback(undefined, new Error("IframePhone timed out waiting for reply"));
+            }, 2000)
+        };
 
         phone.post(namespace, {
             messageType: 'call',

@@ -1,4 +1,4 @@
-/*global describe, it, beforeEach, expect, oneChildIframeLoaded, iframePhone */
+/*global describe, it, beforeEach, afterEach, expect, jasmine, oneChildIframeLoaded, iframePhone */
 
 "use strict";
 
@@ -154,4 +154,47 @@ describe("IframePhoneRpcEndpoint", function() {
             });
         });
     });
+
+
+  describe("call timeout", function() {
+
+    beforeEach(function() {
+        jasmine.clock().install();
+    });
+
+    afterEach(function() {
+        jasmine.clock().uninstall();
+    });
+
+    it("should return an error if reply message takes a long time", function() {
+        var callback = jasmine.createSpy('callback');
+
+        child1Endpoint.call("neverRespond", callback);
+
+        jasmine.clock().tick(999);
+
+        expect(callback).not.toHaveBeenCalled();
+
+        jasmine.clock().tick(4000);
+
+        expect(callback).toHaveBeenCalled();
+        expect(callback.calls.first().args[0]).toBeUndefined();
+        expect(callback.calls.first().args[1].constructor).toBe(Error);
+    });
+
+    it("should not time out after a successful reply", function(done) {
+        var isFirstCallback = true;
+
+        child1Endpoint.call("hello", function(message, error) {
+            expect(error).toBeUndefined();
+
+            if (isFirstCallback) {
+                isFirstCallback = false;
+                // a second call to this callback would occur here if we don't clear the timeout:
+                jasmine.clock().tick(1e6);
+                done();
+            }
+        });
+    });
+  });
 });
