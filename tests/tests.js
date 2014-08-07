@@ -196,5 +196,11 @@ describe("IframePhoneRpcEndpoint", function() {
             }
         });
     });
+
+    it("should not throw an error if the timeout occurs and there is no callback", function() {
+        child1Endpoint.call("neverRespond");
+        expect(function() { jasmine.clock().tick(4000); }).not.toThrow();
+    });
+
   });
 });
