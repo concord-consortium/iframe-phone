@@ -109,6 +109,21 @@ describe("IframePhoneRpcEndpoint", function() {
             });
         });
 
+        it("should not require defining a callback if the return value is not important", function(done) {
+
+            var caughtError = false;
+            function handler() {
+                caughtError = true;
+            }
+            window.addEventListener('error', handler);
+
+            child1Endpoint.call("hello");
+            child1Endpoint.call("hello", function() {
+                expect(caughtError).toBe(false);
+                window.removeEventListener('error', handler);
+                done();
+            });
+        });
     });
 
 
