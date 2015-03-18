@@ -166,15 +166,25 @@ function getPseudoUUID() {
     return ret.join('');
 }
 
-module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindow, targetOrigin) {
-    var phone;
+module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindow, targetOrigin, phone) {
     var pendingCallbacks = Object.create({});
 
-    if (targetWindow === window.parent) {
-        phone = getIFrameEndpoint();
-        phone.initialize();
-    } else {
-        phone = new ParentEndpoint(targetWindow, targetOrigin);
+    // if it's a non-null object, rather than a function, 'handler' is really an options object
+    if (handler && typeof handler === 'object') {
+        namespace = handler.namespace;
+        targetWindow = handler.targetWindow;
+        targetOrigin = handler.targetOrigin;
+        phone = handler.phone;
+        handler = handler.handler;
+    }
+
+    if ( ! phone ) {
+        if (targetWindow === window.parent) {
+            phone = getIFrameEndpoint();
+            phone.initialize();
+        } else {
+            phone = new ParentEndpoint(targetWindow, targetOrigin);
+        }
     }
 
     phone.addListener(namespace, function(message) {
