@@ -407,7 +407,9 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     post: post,
     addListener: addListener,
     removeListener: removeListener,
-    disconnect: disconnect
+    disconnect: disconnect,
+    getTargetWindow: getTargetWindow,
+    targetOrigin: targetOrigin
   };
 };
 
