@@ -190,8 +190,8 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
     phone.addListener(namespace, function(message) {
         var callbackObj;
 
-        if (message.messageType === 'call') {
-            handler(message.value, function(returnValue) {
+        if (message.messageType === 'call' && typeof this.handler === 'function') {
+            this.handler.call(undefined, message.value, function(returnValue) {
                 phone.post(namespace, {
                     messageType: 'returnValue',
                     uuid: message.uuid,
@@ -209,7 +209,7 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
                 pendingCallbacks[message.uuid] = null;
             }
         }
-    });
+    }.bind(this));
 
     function call(message, callback) {
         var uuid = getPseudoUUID();
@@ -234,10 +234,9 @@ module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindo
         phone.disconnect();
     }
 
-    return {
-        call: call,
-        disconnect: disconnect
-    };
+    this.handler = handler;
+    this.call = call.bind(this);
+    this.disconnect = disconnect.bind(this);
 };
 
 },{"./iframe-endpoint":1,"./parent-endpoint":3}],3:[function(require,module,exports){
