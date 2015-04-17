@@ -34,7 +34,7 @@ phone.addListener('response', function (content) {
 ```javascript
 // IFrameEndpoint instance is a singleton (iframe can't have multiple parents anyway).
 var phone = iframePhone.getIFrameEndpoint();
-phone.addListener('testMessage', function (content) { 
+phone.addListener('testMessage', function (content) {
   console.log("iframe received message: " + content);
   phone.post('response', 'got it');
 });
@@ -44,9 +44,4 @@ phone.initialize();
 
 ## Licensing
 
-iframe-phone is Copyright 2012 (c) by the Concord Consortium and is distributed under
-any of the following licenses:
-
-- [Simplified BSD](http://www.opensource.org/licenses/BSD-2-Clause),
-- [MIT](http://www.opensource.org/licenses/MIT), or
-- [Apache 2.0](http://www.opensource.org/licenses/Apache-2.0).
+iframe-phone is Copyright 2012 (c) by the Concord Consortium and is distributed under [MIT](http://www.opensource.org/licenses/MIT) license.
