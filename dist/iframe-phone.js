@@ -63,35 +63,35 @@ function IFrameEndpoint() {
   }
 
   function messageListener(message) {
-      // Anyone can send us a message. Only pay attention to messages from parent.
-      if (message.source !== window.parent) return;
+    // Anyone can send us a message. Only pay attention to messages from parent.
+    if (message.source !== window.parent) return;
 
-      var messageData = message.data;
+    var messageData = message.data;
 
-      if (typeof messageData === 'string') messageData = JSON.parse(messageData);
+    if (typeof messageData === 'string') messageData = JSON.parse(messageData);
 
-      // We don't know origin property of parent window until it tells us.
-      if (!connected && messageData.type === 'hello') {
-        // This is the return handshake from the embedding window.
-        parentOrigin = messageData.origin;
-        connected = true;
-        stopPostingHello();
-        while(postMessageQueue.length > 0) {
-          post(postMessageQueue.shift());
-        }
+    // We don't know origin property of parent window until it tells us.
+    if (!connected && messageData.type === 'hello') {
+      // This is the return handshake from the embedding window.
+      parentOrigin = messageData.origin;
+      connected = true;
+      stopPostingHello();
+      while (postMessageQueue.length > 0) {
+        post(postMessageQueue.shift());
       }
+    }
 
-      // Perhaps-redundantly insist on checking origin as well as source window of message.
-      if (parentOrigin === '*' || message.origin === parentOrigin) {
-        if (listeners[messageData.type]) listeners[messageData.type](messageData.content);
-      }
-   }
+    // Perhaps-redundantly insist on checking origin as well as source window of message.
+    if (parentOrigin === '*' || message.origin === parentOrigin) {
+      if (listeners[messageData.type]) listeners[messageData.type](messageData.content);
+    }
+  }
 
-   function disconnect() {
-     connected = false;
-     stopPostingHello();
-     window.removeEventListener('message', messsageListener);
-   }
+  function disconnect() {
+    connected = false;
+    stopPostingHello();
+    window.removeEventListener('message', messsageListener);
+  }
 
   /**
     Initialize communication with the parent frame. This should not be called until the app's custom
@@ -146,96 +146,95 @@ module.exports = function getIFrameEndpoint() {
   }
   return instance;
 };
-},{"./structured-clone":4}],2:[function(require,module,exports){
-"use strict";
 
+},{"./structured-clone":4}],2:[function(require,module,exports){
 var ParentEndpoint = require('./parent-endpoint');
 var getIFrameEndpoint = require('./iframe-endpoint');
 
 // Not a real UUID as there's an RFC for that (needed for proper distributed computing).
 // But in this fairly parochial situation, we just need to be fairly sure to avoid repeats.
 function getPseudoUUID() {
-    var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    var len = chars.length;
-    var ret = [];
+  var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  var len = chars.length;
+  var ret = [];
 
-    for (var i = 0; i < 10; i++) {
-        ret.push(chars[Math.floor(Math.random() * len)]);
-    }
-    return ret.join('');
+  for (var i = 0; i < 10; i++) {
+    ret.push(chars[Math.floor(Math.random() * len)]);
+  }
+  return ret.join('');
 }
 
 module.exports = function IframePhoneRpcEndpoint(handler, namespace, targetWindow, targetOrigin, phone) {
-    var pendingCallbacks = Object.create({});
+  var pendingCallbacks = Object.create({});
 
-    // if it's a non-null object, rather than a function, 'handler' is really an options object
-    if (handler && typeof handler === 'object') {
-        namespace = handler.namespace;
-        targetWindow = handler.targetWindow;
-        targetOrigin = handler.targetOrigin;
-        phone = handler.phone;
-        handler = handler.handler;
+  // if it's a non-null object, rather than a function, 'handler' is really an options object
+  if (handler && typeof handler === 'object') {
+    namespace = handler.namespace;
+    targetWindow = handler.targetWindow;
+    targetOrigin = handler.targetOrigin;
+    phone = handler.phone;
+    handler = handler.handler;
+  }
+
+  if (!phone) {
+    if (targetWindow === window.parent) {
+      phone = getIFrameEndpoint();
+      phone.initialize();
+    } else {
+      phone = new ParentEndpoint(targetWindow, targetOrigin);
     }
+  }
 
-    if ( ! phone ) {
-        if (targetWindow === window.parent) {
-            phone = getIFrameEndpoint();
-            phone.initialize();
-        } else {
-            phone = new ParentEndpoint(targetWindow, targetOrigin);
-        }
-    }
+  phone.addListener(namespace, function (message) {
+    var callbackObj;
 
-    phone.addListener(namespace, function(message) {
-        var callbackObj;
-
-        if (message.messageType === 'call' && typeof this.handler === 'function') {
-            this.handler.call(undefined, message.value, function(returnValue) {
-                phone.post(namespace, {
-                    messageType: 'returnValue',
-                    uuid: message.uuid,
-                    value: returnValue
-                });
-            });
-        } else if (message.messageType === 'returnValue') {
-            callbackObj = pendingCallbacks[message.uuid];
-
-            if (callbackObj) {
-                window.clearTimeout(callbackObj.timeout);
-                if (callbackObj.callback) {
-                    callbackObj.callback.call(undefined, message.value);
-                }
-                pendingCallbacks[message.uuid] = null;
-            }
-        }
-    }.bind(this));
-
-    function call(message, callback) {
-        var uuid = getPseudoUUID();
-
-        pendingCallbacks[uuid] = {
-            callback: callback,
-            timeout: window.setTimeout(function() {
-                if (callback) {
-                    callback(undefined, new Error("IframePhone timed out waiting for reply"));
-                }
-            }, 2000)
-        };
-
+    if (message.messageType === 'call' && typeof this.handler === 'function') {
+      this.handler.call(undefined, message.value, function (returnValue) {
         phone.post(namespace, {
-            messageType: 'call',
-            uuid: uuid,
-            value: message
+          messageType: 'returnValue',
+          uuid: message.uuid,
+          value: returnValue
         });
-    }
+      });
+    } else if (message.messageType === 'returnValue') {
+      callbackObj = pendingCallbacks[message.uuid];
 
-    function disconnect() {
-        phone.disconnect();
+      if (callbackObj) {
+        window.clearTimeout(callbackObj.timeout);
+        if (callbackObj.callback) {
+          callbackObj.callback.call(undefined, message.value);
+        }
+        pendingCallbacks[message.uuid] = null;
+      }
     }
+  }.bind(this));
 
-    this.handler = handler;
-    this.call = call.bind(this);
-    this.disconnect = disconnect.bind(this);
+  function call(message, callback) {
+    var uuid = getPseudoUUID();
+
+    pendingCallbacks[uuid] = {
+      callback: callback,
+      timeout: window.setTimeout(function () {
+        if (callback) {
+          callback(undefined, new Error("IframePhone timed out waiting for reply"));
+        }
+      }, 2000)
+    };
+
+    phone.post(namespace, {
+      messageType: 'call',
+      uuid: uuid,
+      value: message
+    });
+  }
+
+  function disconnect() {
+    phone.disconnect();
+  }
+
+  this.handler = handler;
+  this.call = call.bind(this);
+  this.disconnect = disconnect.bind(this);
 };
 
 },{"./iframe-endpoint":1,"./parent-endpoint":3}],3:[function(require,module,exports){
@@ -392,7 +391,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
   }
 
   // when we receive 'hello':
-  addListener('hello', function() {
+  addListener('hello', function () {
     connected = true;
 
     // send hello response
@@ -408,7 +407,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     }
 
     // Now send any messages that have been queued up ...
-    while(postMessageQueue.length > 0) {
+    while (postMessageQueue.length > 0) {
       post(postMessageQueue.shift());
     }
   });
@@ -439,7 +438,7 @@ var featureSupported = false;
       // internal [[Class]] property of the message being passed through.
       // Safari will pass through DOM nodes as Null iOS safari on the other hand
       // passes it through as DOMWindow, gotcha.
-      window.onmessage = function(e){
+      window.onmessage = function (e) {
         var type = Object.prototype.toString.call(e.data);
         result = (type.indexOf("Null") != -1 || type.indexOf("DOMWindow") != -1) ? 1 : 0;
         featureSupported = {
@@ -448,8 +447,8 @@ var featureSupported = false;
       };
       // Spec states you can't transmit DOM nodes and it will throw an error
       // postMessage implimentations that support cloned data will throw.
-      window.postMessage(document.createElement("a"),"*");
-    } catch(e) {
+      window.postMessage(document.createElement("a"), "*");
+    } catch (e) {
       // BBOS6 throws but doesn't pass through the correct exception
       // so check error message
       result = (e.DATA_CLONE_ERR || e.message == "Cannot post cyclic structures.") ? 1 : 0;
