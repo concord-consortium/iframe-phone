@@ -46,8 +46,7 @@ function IFrameEndpoint() {
   // with it.)
   function postHello() {
     postToTarget({
-      type: 'hello',
-      origin: document.location.href.match(/(.*?\/\/.*?)\//)[1]
+      type: 'hello'
     }, '*');
   }
 
@@ -83,7 +82,7 @@ function IFrameEndpoint() {
       }
 
       // Perhaps-redundantly insist on checking origin as well as source window of message.
-      if (message.origin === parentOrigin) {
+      if (parentOrigin === '*' || message.origin === parentOrigin) {
         if (listeners[messageData.type]) listeners[messageData.type](messageData.content);
       }
    }
@@ -282,7 +281,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
   var handlers = {};
   var targetWindowIsIframeElement;
 
-  function getOrigin(iframe) {
+  function getIframeOrigin(iframe) {
     return iframe.src.match(/(.*?\/\/.*?)\//)[1];
   }
 
@@ -301,7 +300,6 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     if (connected) {
       var tWindow = getTargetWindow();
       // if we are laready connected ... send the message
-      message.origin = selfOrigin;
       // See http://dev.opera.com/articles/view/window-postmessage-messagechannel/#crossdoc
       //     https://github.com/Modernizr/Modernizr/issues/388
       //     http://jsfiddle.net/ryanseddon/uZTgD/2/
@@ -343,7 +341,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
 
   function receiveMessage(message) {
     var messageData;
-    if (message.source === getTargetWindow() && message.origin === targetOrigin) {
+    if (message.source === getTargetWindow() && (targetOrigin === '*' || message.origin === targetOrigin)) {
       messageData = message.data;
       if (typeof messageData === 'string') {
         messageData = JSON.parse(messageData);
@@ -376,8 +374,21 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     // afterConnectionCallback)
     if (!targetOrigin || targetOrigin.constructor === Function) {
       afterConnectedCallback = targetOrigin;
-      targetOrigin = getOrigin(targetWindowOrIframeEl);
+      targetOrigin = getIframeOrigin(targetWindowOrIframeEl);
     }
+  }
+
+  // Handle pages served through file:// protocol. Behaviour varies in different browsers. Safari sets origin
+  // to 'file://' and everything works fine, but Chrome and Safari set message.origin to null.
+  // Also, https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage says:
+  //  > Lastly, posting a message to a page at a file: URL currently requires that the targetOrigin argument be "*".
+  //  > file:// cannot be used as a security restriction; this restriction may be modified in the future.
+  // So, using '*' seems like the only possible solution.
+  if (selfOrigin === 'file://') {
+    selfOrigin = '*';
+  }
+  if (targetOrigin === 'file://') {
+    targetOrigin = '*';
   }
 
   // when we receive 'hello':
@@ -385,7 +396,10 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     connected = true;
 
     // send hello response
-    post('hello');
+    post({
+      type: 'hello',
+      origin: selfOrigin
+    });
 
     // give the user a chance to do things now that we are connected
     // note that is will happen before any queued messages

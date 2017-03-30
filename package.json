@@ -1,6 +1,6 @@
 {
   "name": "iframe-phone",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "description": "Convenient communication between the parent site and iframe based on window.postMessage()",
   "main": "main.js",
   "dependencies": {
