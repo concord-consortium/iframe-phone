@@ -42,6 +42,13 @@ phone.addListener('testMessage', function (content) {
 phone.initialize();
 ```
 
+## Changelog
+
+#### 1.2.0
+ - Added support of `file://` protocol (both ParentEndpoint and IframeEndpoint need to be upgraded to >= v1.2.0)
+ - Origin check removed from IframeEndpoint (it didn't provide any security)
+
+
 ## Licensing
 
 iframe-phone is Copyright 2012 (c) by the Concord Consortium and is distributed under [MIT](http://www.opensource.org/licenses/MIT) license.

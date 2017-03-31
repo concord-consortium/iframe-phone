@@ -4,21 +4,20 @@ var HELLO_INTERVAL_LENGTH = 200;
 var HELLO_TIMEOUT_LENGTH = 60000;
 
 function IFrameEndpoint() {
-  var parentOrigin;
   var listeners = {};
   var isInitialized = false;
   var connected = false;
   var postMessageQueue = [];
   var helloInterval;
 
-  function postToTarget(message, target) {
+  function postToParent(message) {
     // See http://dev.opera.com/articles/view/window-postmessage-messagechannel/#crossdoc
     //     https://github.com/Modernizr/Modernizr/issues/388
     //     http://jsfiddle.net/ryanseddon/uZTgD/2/
     if (structuredClone.supported()) {
-      window.parent.postMessage(message, target);
+      window.parent.postMessage(message, '*');
     } else {
-      window.parent.postMessage(JSON.stringify(message), target);
+      window.parent.postMessage(JSON.stringify(message), '*');
     }
   }
 
@@ -35,19 +34,16 @@ function IFrameEndpoint() {
       };
     }
     if (connected) {
-      postToTarget(message, parentOrigin);
+      postToParent(message);
     } else {
       postMessageQueue.push(message);
     }
   }
 
-  // Only the initial 'hello' message goes permissively to a '*' target (because due to cross origin
-  // restrictions we can't find out our parent's origin until they voluntarily send us a message
-  // with it.)
   function postHello() {
-    postToTarget({
+    postToParent({
       type: 'hello'
-    }, '*');
+    });
   }
 
   function addListener(type, fn) {
@@ -65,15 +61,10 @@ function IFrameEndpoint() {
   function messageListener(message) {
     // Anyone can send us a message. Only pay attention to messages from parent.
     if (message.source !== window.parent) return;
-
     var messageData = message.data;
-
     if (typeof messageData === 'string') messageData = JSON.parse(messageData);
 
-    // We don't know origin property of parent window until it tells us.
     if (!connected && messageData.type === 'hello') {
-      // This is the return handshake from the embedding window.
-      parentOrigin = messageData.origin;
       connected = true;
       stopPostingHello();
       while (postMessageQueue.length > 0) {
@@ -81,9 +72,8 @@ function IFrameEndpoint() {
       }
     }
 
-    // Perhaps-redundantly insist on checking origin as well as source window of message.
-    if (parentOrigin === '*' || message.origin === parentOrigin) {
-      if (listeners[messageData.type]) listeners[messageData.type](messageData.content);
+    if (connected && listeners[messageData.type]) {
+      listeners[messageData.type](messageData.content);
     }
   }
 
@@ -108,7 +98,6 @@ function IFrameEndpoint() {
 
     // We kick off communication with the parent window by sending a "hello" message. Then we wait
     // for a handshake (another "hello" message) from the parent window.
-    postHello();
     startPostingHello();
     window.addEventListener('message', messageListener, false);
   }
@@ -119,6 +108,8 @@ function IFrameEndpoint() {
     }
     helloInterval = window.setInterval(postHello, HELLO_INTERVAL_LENGTH);
     window.setTimeout(stopPostingHello, HELLO_TIMEOUT_LENGTH);
+    // Post the first msg immediately.
+    postHello();
   }
 
   function stopPostingHello() {
@@ -128,12 +119,12 @@ function IFrameEndpoint() {
 
   // Public API.
   return {
-    initialize        : initialize,
-    getListenerNames  : getListenerNames,
-    addListener       : addListener,
+    initialize: initialize,
+    getListenerNames: getListenerNames,
+    addListener: addListener,
     removeAllListeners: removeAllListeners,
-    disconnect        : disconnect,
-    post              : post
+    disconnect: disconnect,
+    post: post
   };
 }
 
@@ -274,7 +265,6 @@ var structuredClone = require('./structured-clone');
 */
 
 module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, afterConnectedCallback) {
-  var selfOrigin = window.location.href.match(/(.*?\/\/.*?)\//)[1];
   var postMessageQueue = [];
   var connected = false;
   var handlers = {};
@@ -383,9 +373,6 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
   //  > Lastly, posting a message to a page at a file: URL currently requires that the targetOrigin argument be "*".
   //  > file:// cannot be used as a security restriction; this restriction may be modified in the future.
   // So, using '*' seems like the only possible solution.
-  if (selfOrigin === 'file://') {
-    selfOrigin = '*';
-  }
   if (targetOrigin === 'file://') {
     targetOrigin = '*';
   }
@@ -397,7 +384,9 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     // send hello response
     post({
       type: 'hello',
-      origin: selfOrigin
+      // `origin` property isn't used by IframeEndpoint anymore (>= 1.2.0), but it's being sent to be
+      // backward compatible with old IframeEndpoint versions (< v1.2.0).
+      origin: window.location.href.match(/(.*?\/\/.*?)\//)[1]
     });
 
     // give the user a chance to do things now that we are connected
