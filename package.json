@@ -3,8 +3,7 @@
   "version": "1.2.0",
   "description": "Convenient communication between the parent site and iframe based on window.postMessage()",
   "main": "main.js",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "browserify": ">= 2.35 < 3.0"
   },
