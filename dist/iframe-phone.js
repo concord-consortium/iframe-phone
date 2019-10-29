@@ -80,7 +80,7 @@ function IFrameEndpoint() {
   function disconnect() {
     connected = false;
     stopPostingHello();
-    window.removeEventListener('message', messsageListener);
+    window.removeEventListener('message', messageListener);
   }
 
   /**
