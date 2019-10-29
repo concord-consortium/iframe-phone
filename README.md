@@ -44,9 +44,16 @@ phone.initialize();
 
 ## Changelog
 
+#### 1.2.1
+
+- Fix structured clone test that resulted in no actual use of structured clone even
+   when the browser supported it. This might speed up the message passing.
+- Fix typo in disconnect which was preventing an real disconnect
+
 #### 1.2.0
- - Added support of `file://` protocol (both ParentEndpoint and IframeEndpoint need to be upgraded to >= v1.2.0)
- - Origin check removed from IframeEndpoint (it didn't provide any security)
+
+- Added support of `file://` protocol (both ParentEndpoint and IframeEndpoint need to be upgraded to >= v1.2.0)
+- Origin check removed from IframeEndpoint (it didn't provide any security)
 
 
 ## Licensing
