@@ -2,24 +2,26 @@ export type AfterConnectedCallback = () => void;
 
 export type ListenerCallback = (value: any) => void;
 
+export type Content = object | string | number | null;
+
 export class ParentEndpoint {
   constructor(targetWindowOrIframeEl: WindowProxy | HTMLIFrameElement, afterConnectedCallback?: AfterConnectedCallback);
   constructor(targetWindowOrIframeEl: WindowProxy | HTMLIFrameElement, targetOrigin?: string, afterConnectedCallback?: AfterConnectedCallback);
-  post(type: string, content?: object | string | number | null): void;
-  post(type: {type: string; content?: object | string | number | null}): void;
+  post(type: string, content?: Content): void;
+  post(type: {type: string; content?: Content}): void;
   addListener(messageName: string, callback: ListenerCallback): void;
   removeListener(messageName: string): void;
   removeAllListeners(): void;
   disconnect(): void;
   getTargetWindow(): WindowProxy;
-  targetOrigin: targetOrigin
+  targetOrigin: string;
 }
 
 export class IFrameEndpoint {
   initialize(): void;
   getListenerNames(): string[];
-  post(type: string, content?: object | string | number | null): void;
-  post(type: {type: string; content?: object | string | number | null}): void;
+  post(type: string, content?: Content): void;
+  post(type: {type: string; content?: Content}): void;
   addListener(type: string, ListenerCallback): void;
   removeListener(messageName: string): void;
   removeAllListeners(): void;
