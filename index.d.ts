@@ -22,7 +22,7 @@ export class IFrameEndpoint {
   getListenerNames(): string[];
   post(type: string, content?: Content): void;
   post(type: {type: string; content?: Content}): void;
-  addListener(type: string, ListenerCallback): void;
+  addListener(type: string, callback: ListenerCallback): void;
   removeListener(messageName: string): void;
   removeAllListeners(): void;
   disconnect(): void;
@@ -47,6 +47,6 @@ export class IframePhoneRpcEndpoint {
 
 export function getIFrameEndpoint(): IFrameEndpoint
 
-export const structuredClone = {
-  supported(): boolean;
+declare namespace structuredClone {
+  function supported(): boolean;
 }
