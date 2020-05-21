@@ -44,6 +44,13 @@ phone.initialize();
 
 ## Changelog
 
+#### 1.3.0
+
+- Added index.d.ts types file so the library can be consumed by TypeScript
+- Added removeListener() to IFrameEndpoint
+- Added removeAllListeners() to ParentEndpoint
+- Added call to removeAllListeners() in IFrameEndpoint and ParentEndpoint disconnect()
+
 #### 1.2.1
 
 - Fix structured clone test that resulted in no actual use of structured clone even
