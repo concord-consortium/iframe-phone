@@ -44,6 +44,9 @@ phone.initialize();
 
 ## Changelog
 
+#### 1.3.1
+- Fixed issues with index.d.ts types file for latest TypeScript
+
 #### 1.3.0
 
 - Added index.d.ts types file so the library can be consumed by TypeScript
