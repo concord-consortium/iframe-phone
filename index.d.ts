@@ -41,7 +41,7 @@ export class IframePhoneRpcEndpoint {
   constructor(handler: IframePhoneRpcEndpointHandlerObj);
   constructor(handler: IframePhoneRpcEndpointHandlerFn, namespace: string, targetWindow: WindowProxy | HTMLIFrameElement, targetOrigin: string, phone: ParentEndpoint | IFrameEndpoint);
   handler: IframePhoneRpcEndpointHandlerFn;
-  call(message: string, callback: ListenerCallback): void;
+  call(message: string | object, callback: ListenerCallback): void;
   disconnect(): void;
 }
 

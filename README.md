@@ -44,6 +44,13 @@ phone.initialize();
 
 ## Changelog
 
+#### 1.4.0
+- Updated dependencies (browserify 17)
+- Restricted published files to those required
+- Updated argument types for `IframePhoneRpcEndpoint.call`
+- `IFrameEndpoint.messageListener` handles invalid JSON messages
+- `ParentEndpoint.receiveMessage` handles invalid JSON messages
+
 #### 1.3.1
 - Fixed issues with index.d.ts types file for latest TypeScript
 
@@ -68,4 +75,4 @@ phone.initialize();
 
 ## Licensing
 
-iframe-phone is Copyright 2012 (c) by the Concord Consortium and is distributed under [MIT](http://www.opensource.org/licenses/MIT) license.
+iframe-phone is Copyright 2025 (c) by the Concord Consortium and is distributed under [MIT](http://www.opensource.org/licenses/MIT) license.
