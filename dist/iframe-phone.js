@@ -1,4 +1,4 @@
-!function(e){"object"==typeof exports?module.exports=e():"function"==typeof define&&define.amd?define(e):"undefined"!=typeof window?window.iframePhone=e():"undefined"!=typeof global?global.iframePhone=e():"undefined"!=typeof self&&(self.iframePhone=e())}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.iframePhone = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 var structuredClone = require('./structured-clone');
 var HELLO_INTERVAL_LENGTH = 200;
 var HELLO_TIMEOUT_LENGTH = 60000;
@@ -50,6 +50,10 @@ function IFrameEndpoint() {
     listeners[type] = fn;
   }
 
+  function removeListener(type) {
+    delete listeners[type];
+  }
+
   function removeAllListeners() {
     listeners = {};
   }
@@ -62,7 +66,15 @@ function IFrameEndpoint() {
     // Anyone can send us a message. Only pay attention to messages from parent.
     if (message.source !== window.parent) return;
     var messageData = message.data;
-    if (typeof messageData === 'string') messageData = JSON.parse(messageData);
+    if (typeof messageData === 'string') {
+      try {
+        messageData = JSON.parse(messageData);
+      } catch (e) {
+        // Not a JSON string, ignore
+        console.warn("iframe-phone: IFrameEndpoint ignoring non-JSON message:", messageData);
+        return;
+      }
+    }
 
     if (!connected && messageData.type === 'hello') {
       connected = true;
@@ -80,6 +92,7 @@ function IFrameEndpoint() {
   function disconnect() {
     connected = false;
     stopPostingHello();
+    removeAllListeners();
     window.removeEventListener('message', messageListener);
   }
 
@@ -122,6 +135,7 @@ function IFrameEndpoint() {
     initialize: initialize,
     getListenerNames: getListenerNames,
     addListener: addListener,
+    removeListener: removeListener,
     removeAllListeners: removeAllListeners,
     disconnect: disconnect,
     post: post
@@ -256,9 +270,9 @@ var structuredClone = require('./structured-clone');
   against sending messages to an unexpected domain. This might happen if our iframe is navigated to
   a third-party URL unexpectedly. Furthermore, having a reference to Window object (as in the first
   form of the constructor) does not protect against sending a message to the wrong domain. The
-  window object is actualy a WindowProxy which transparently proxies the Window object of the
+  window object is actually a WindowProxy which transparently proxies the Window object of the
   underlying iframe, so that when the iframe is navigated, the "same" WindowProxy now references a
-  completely differeent Window object, possibly controlled by a hostile domain.
+  completely different Window object, possibly controlled by a hostile domain.
 
   See http://www.esdiscuss.org/topic/a-dom-use-case-that-can-t-be-emulated-with-direct-proxies for
   more about this weird behavior of WindowProxies (the type returned by <iframe>.contentWindow).
@@ -288,7 +302,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     }
     if (connected) {
       var tWindow = getTargetWindow();
-      // if we are laready connected ... send the message
+      // if we are already connected ... send the message
       // See http://dev.opera.com/articles/view/window-postmessage-messagechannel/#crossdoc
       //     https://github.com/Modernizr/Modernizr/issues/388
       //     http://jsfiddle.net/ryanseddon/uZTgD/2/
@@ -308,7 +322,11 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
   }
 
   function removeListener(messageName) {
-    handlers[messageName] = null;
+    delete handlers[messageName];
+  }
+
+  function removeAllListeners() {
+    handlers = {};
   }
 
   // Note that this function can't be used when IFrame element hasn't been added to DOM yet
@@ -333,18 +351,25 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     if (message.source === getTargetWindow() && (targetOrigin === '*' || message.origin === targetOrigin)) {
       messageData = message.data;
       if (typeof messageData === 'string') {
-        messageData = JSON.parse(messageData);
+        try {
+          messageData = JSON.parse(messageData);
+        } catch (e) {
+          // Not a JSON string, ignore
+          console.warn("iframe-phone: ParentEndpoint ignoring non-JSON message:", messageData);
+          return;
+        }
       }
       if (handlers[messageData.type]) {
         handlers[messageData.type](messageData.content);
       } else {
-        console.log("cant handle type: " + messageData.type);
+        console.warn("iframe-phone: ParentEndPoint ignoring unrecognized message type:", messageData.type);
       }
     }
   }
 
   function disconnect() {
     connected = false;
+    removeAllListeners();
     window.removeEventListener('message', receiveMessage);
   }
 
@@ -367,7 +392,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     }
   }
 
-  // Handle pages served through file:// protocol. Behaviour varies in different browsers. Safari sets origin
+  // Handle pages served through file:// protocol. Behavior varies in different browsers. Safari sets origin
   // to 'file://' and everything works fine, but Chrome and Safari set message.origin to null.
   // Also, https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage says:
   //  > Lastly, posting a message to a page at a file: URL currently requires that the targetOrigin argument be "*".
@@ -408,6 +433,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
     post: post,
     addListener: addListener,
     removeListener: removeListener,
+    removeAllListeners: removeAllListeners,
     disconnect: disconnect,
     getTargetWindow: getTargetWindow,
     targetOrigin: targetOrigin
@@ -443,24 +469,23 @@ exports.supported = function supported() {
 };
 
 },{}],5:[function(require,module,exports){
-module.exports = {
+const iframePhone = {
   /**
-   * Allows to communicate with an iframe.
+   * Allows communication with an iframe.
    */
   ParentEndpoint:  require('./lib/parent-endpoint'),
   /**
-   * Allows to communicate with a parent page.
+   * Allows communication with a parent page.
    * IFrameEndpoint is a singleton, as iframe can't have multiple parents anyway.
    */
   getIFrameEndpoint: require('./lib/iframe-endpoint'),
   structuredClone: require('./lib/structured-clone'),
 
-  // TODO: May be misnamed
   IframePhoneRpcEndpoint: require('./lib/iframe-phone-rpc-endpoint')
 
 };
 
-},{"./lib/iframe-endpoint":1,"./lib/iframe-phone-rpc-endpoint":2,"./lib/parent-endpoint":3,"./lib/structured-clone":4}]},{},[5])
-(5)
+module.exports = iframePhone;
+
+},{"./lib/iframe-endpoint":1,"./lib/iframe-phone-rpc-endpoint":2,"./lib/parent-endpoint":3,"./lib/structured-clone":4}]},{},[5])(5)
 });
-;
