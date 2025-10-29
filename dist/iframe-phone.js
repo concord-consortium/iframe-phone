@@ -362,7 +362,7 @@ module.exports = function ParentEndpoint(targetWindowOrIframeEl, targetOrigin, a
       if (handlers[messageData.type]) {
         handlers[messageData.type](messageData.content);
       } else {
-        console.warn("iframe-phone: ParentEndPoint ignoring unrecognized message type:", messageData.type);
+        console.warn("iframe-phone: ParentEndpoint ignoring unrecognized message type:", messageData.type);
       }
     }
   }
